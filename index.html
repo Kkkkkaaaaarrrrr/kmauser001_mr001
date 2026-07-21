@@ -4878,7 +4878,6 @@
         // Load users
         const usersData = await firebaseGetAll('users');
         users = usersData.map(u => {
-          // Convert string IDs to numbers if needed
           return { ...u, id: parseInt(u.id) || u.id };
         });
 
@@ -4973,18 +4972,15 @@
     async function saveStudents() {
       try {
         const batch = writeBatch(db);
-        // First, get all existing student documents
         const existingDocs = await firebaseGetAll('students');
         const existingIds = existingDocs.map(d => d.id);
 
-        // Update or add each student
         for (const student of allStudents) {
           const docId = student.id.toString();
           const ref = doc(db, 'students', docId);
           batch.set(ref, student, { merge: true });
         }
 
-        // Remove students that no longer exist
         const currentIds = allStudents.map(s => s.id.toString());
         for (const id of existingIds) {
           if (!currentIds.includes(id)) {
@@ -7945,7 +7941,7 @@
       openModal('addUserModal');
     }
 
-    function addNewUser() {
+    async function addNewUser() {
       const fullname = document.getElementById('newUserFullname').value.trim();
       const username = document.getElementById('newUserUsername').value.trim();
       const password = document.getElementById('newUserPassword').value.trim();
@@ -7962,11 +7958,24 @@
         return;
       }
 
-      users.push({ id: Date.now(), username, password, fullname, role, gender });
-      saveUsers();
-      renderUsersList();
-      closeModal('addUserModal');
-      showToast(`✅ تم إضافة ${fullname}`, 'success');
+      const newUser = {
+        id: Date.now(),
+        username,
+        password,
+        fullname,
+        role,
+        gender
+      };
+
+      users.push(newUser);
+      const saved = await saveUsers();
+      if (saved) {
+        renderUsersList();
+        closeModal('addUserModal');
+        showToast(`✅ تم إضافة ${fullname} بنجاح`, 'success');
+      } else {
+        showMessage('❌ حدث خطأ أثناء حفظ المستخدم', 'error', 'addUserMsg');
+      }
     }
 
     // ================================================================
