@@ -4713,7 +4713,10 @@
         const snapshot = await getDocs(q);
         const results = [];
         snapshot.forEach(doc => {
-          results.push({ id: doc.id, ...doc.data() });
+          const data = doc.data();
+          // Convert id to number if it's a number
+          const id = isNaN(parseInt(doc.id)) ? doc.id : parseInt(doc.id);
+          results.push({ id, ...data });
         });
         return results;
       } catch (e) {
@@ -4727,7 +4730,9 @@
         const docRef = doc(db, collectionName, docId);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
-          return { id: snapshot.id, ...snapshot.data() };
+          const data = snapshot.data();
+          const id = isNaN(parseInt(snapshot.id)) ? snapshot.id : parseInt(snapshot.id);
+          return { id, ...data };
         }
         return null;
       } catch (e) {
@@ -4761,6 +4766,12 @@
     async function firebaseDelete(collectionName, docId) {
       try {
         const docRef = doc(db, collectionName, docId);
+        // Check if document exists before deleting
+        const snapshot = await getDoc(docRef);
+        if (!snapshot.exists()) {
+          console.warn(`Document ${docId} does not exist in ${collectionName}`);
+          return false;
+        }
         await deleteDoc(docRef);
         return true;
       } catch (e) {
@@ -4878,37 +4889,43 @@
         // Load users
         const usersData = await firebaseGetAll('users');
         users = usersData.map(u => {
-          return { ...u, id: parseInt(u.id) || u.id };
+          const id = parseInt(u.id);
+          return { ...u, id: isNaN(id) ? u.id : id };
         });
 
         // Load students
         const studentsData = await firebaseGetAll('students');
         allStudents = studentsData.map(s => {
-          return { ...s, id: parseInt(s.id) || s.id };
+          const id = parseInt(s.id);
+          return { ...s, id: isNaN(id) ? s.id : id };
         });
 
         // Load groups
         const groupsData = await firebaseGetAll('groups');
         allGroups = groupsData.map(g => {
-          return { ...g, id: parseInt(g.id) || g.id };
+          const id = parseInt(g.id);
+          return { ...g, id: isNaN(id) ? g.id : id };
         });
 
         // Load attendance
         const attendanceData = await firebaseGetAll('attendance');
         allAttendance = attendanceData.map(a => {
-          return { ...a, id: parseInt(a.id) || a.id };
+          const id = parseInt(a.id);
+          return { ...a, id: isNaN(id) ? a.id : id };
         });
 
         // Load exams
         const examsData = await firebaseGetAll('exams');
         allExams = examsData.map(e => {
-          return { ...e, id: parseInt(e.id) || e.id };
+          const id = parseInt(e.id);
+          return { ...e, id: isNaN(id) ? e.id : id };
         });
 
         // Load extra expenses
         const expensesData = await firebaseGetAll('extraExpenses');
         allExtraExpenses = expensesData.map(e => {
-          return { ...e, id: parseInt(e.id) || e.id };
+          const id = parseInt(e.id);
+          return { ...e, id: isNaN(id) ? e.id : id };
         });
 
         // Load main expenses
@@ -4944,7 +4961,8 @@
         // Load message templates
         const templatesData = await firebaseGetAll('messageTemplates');
         messageTemplates = templatesData.map(t => {
-          return { ...t, id: parseInt(t.id) || t.id };
+          const id = parseInt(t.id);
+          return { ...t, id: isNaN(id) ? t.id : id };
         });
 
         itemsPerPage = settings.itemsPerPage || 20;
@@ -4973,7 +4991,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('students');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const student of allStudents) {
           const docId = student.id.toString();
@@ -5001,7 +5019,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('groups');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const group of allGroups) {
           const docId = group.id.toString();
@@ -5029,7 +5047,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('attendance');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const att of allAttendance) {
           const docId = att.id.toString();
@@ -5057,7 +5075,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('extraExpenses');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const exp of allExtraExpenses) {
           const docId = exp.id.toString();
@@ -5107,7 +5125,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('users');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const user of users) {
           const docId = user.id.toString();
@@ -5135,7 +5153,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('messageTemplates');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const t of messageTemplates) {
           const docId = t.id.toString();
@@ -5163,7 +5181,7 @@
       try {
         const batch = writeBatch(db);
         const existingDocs = await firebaseGetAll('exams');
-        const existingIds = existingDocs.map(d => d.id);
+        const existingIds = existingDocs.map(d => d.id.toString());
 
         for (const exam of allExams) {
           const docId = exam.id.toString();
@@ -7124,7 +7142,7 @@
           isPaid = true;
 
           if (s.remainingSessions > 0) {
-            s.remainingSessions--;
+            s.remainingSessions = Math.max(0, s.remainingSessions - 1);
             s.usedSessions = (s.usedSessions || 0) + 1;
             deductionAmount = lecturePrice;
 
@@ -7152,7 +7170,7 @@
           isPaid = false;
 
           if (s.remainingSessions > 0) {
-            s.remainingSessions--;
+            s.remainingSessions = Math.max(0, s.remainingSessions - 1);
             s.usedSessions = (s.usedSessions || 0) + 1;
 
             s.remaining += lecturePrice;
@@ -7171,7 +7189,7 @@
 
         } else if (action === 'absent') {
           if (s.remainingSessions > 0) {
-            s.remainingSessions--;
+            s.remainingSessions = Math.max(0, s.remainingSessions - 1);
             s.usedSessions = (s.usedSessions || 0) + 1;
             remainingAfter = s.remaining;
             msg = `❌ تسجيل غياب ${s.name} - خصم حصة (${typeLabel} - ${dayName})، متبقي ${s.remainingSessions} حصة`;
@@ -7387,7 +7405,7 @@
                 let isPaid = false;
 
                 if (s.subscriptionType === 'session' && s.remainingSessions > 0) {
-                  s.remainingSessions--;
+                  s.remainingSessions = Math.max(0, s.remainingSessions - 1);
                   s.usedSessions = (s.usedSessions || 0) + 1;
                   saveStudents();
                 }
@@ -7421,9 +7439,16 @@
 
     function renderAttendanceList() {
       const container = document.getElementById('attendanceList');
-      const today = new Date().toISOString().split('T')[0];
 
-      let students = currentAttendanceGroupId ? getStudentsByGroup(currentAttendanceGroupId) : [];
+      // التحقق من وجود المجموعة
+      if (!currentAttendanceGroupId) {
+        container.innerHTML = '<p class="text-muted">📚 اختر مجموعة ومحاضرة أولاً</p>';
+        updateAttendanceFilterCounts();
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      let students = getStudentsByGroup(currentAttendanceGroupId);
 
       const filter = attendanceFilter || 'all';
 
@@ -7456,7 +7481,7 @@
       }
 
       if (students.length === 0) {
-        container.innerHTML = '<p class="text-muted">📚 اختر مجموعة ومحاضرة أولاً</p>';
+        container.innerHTML = '<p class="text-muted">📚 لا يوجد طلاب في هذه المجموعة</p>';
         updateAttendanceFilterCounts();
         return;
       }
@@ -7677,30 +7702,33 @@
       const groupId = editingGroupId;
       const group = allGroups.find(g => g.id === groupId);
 
-      if (group) {
-        lectures = group.lectures || [];
-      } else if (window._tempLectures) {
+      if (group && group.lectures) {
+        lectures = group.lectures;
+      } else if (window._tempLectures && window._tempLectures.length > 0) {
         lectures = window._tempLectures;
       } else {
+        // قراءة من DOM إذا لم تكن هناك محاضرات محفوظة
         const tbody = document.getElementById('lectureTableBody');
-        const rows = tbody.querySelectorAll('tr');
-        lectures = [];
-        rows.forEach(row => {
-          const lectureId = parseInt(row.dataset.lectureId);
-          const type = row.querySelector('.lecture-type-select')?.value || 'explanation';
-          const day = row.querySelector('.lecture-day-select')?.value || 'saturday';
-          const startTime = row.querySelector('.lecture-input.time-input')?.value || '17:00';
-          const duration = parseInt(row.querySelector('.lecture-input')?.value) || 90;
-          const price = parseFloat(row.querySelector('.lecture-input.price-input')?.value) || 0;
-          lectures.push({
-            id: lectureId || Date.now() + Math.random() * 1000 + lectureCounter++,
-            type,
-            day,
-            startTime,
-            duration,
-            price
+        if (tbody) {
+          const rows = tbody.querySelectorAll('tr');
+          lectures = [];
+          rows.forEach(row => {
+            const lectureId = parseInt(row.dataset.lectureId);
+            const type = row.querySelector('.lecture-type-select')?.value || 'explanation';
+            const day = row.querySelector('.lecture-day-select')?.value || 'saturday';
+            const startTime = row.querySelector('.lecture-input.time-input')?.value || '17:00';
+            const duration = parseInt(row.querySelector('.lecture-input')?.value) || 90;
+            const price = parseFloat(row.querySelector('.lecture-input.price-input')?.value) || 0;
+            lectures.push({
+              id: lectureId || Date.now() + Math.random() * 1000 + lectureCounter++,
+              type,
+              day,
+              startTime,
+              duration,
+              price
+            });
           });
-        });
+        }
       }
 
       if (!name) {
@@ -7711,7 +7739,7 @@
         showMessage('أدخل العام الدراسي', 'error', 'groupMsg');
         return;
       }
-      if (lectures.length === 0) {
+      if (!lectures || lectures.length === 0) {
         showMessage('أضف محاضرة واحدة على الأقل', 'error', 'groupMsg');
         return;
       }
@@ -7854,6 +7882,13 @@
         setTimeout(() => {
           const ctx = document.getElementById('revenueChart');
           if (!ctx) return;
+
+          // التحقق من وجود Chart
+          if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded');
+            return;
+          }
+
           if (revenueChart) revenueChart.destroy();
           const labels = allStudents.slice(0, 10).map(s => s.name.substring(0, 12));
           const data = allStudents.slice(0, 10).map(s => s.paidAmount || 0);
@@ -7891,12 +7926,18 @@
 
     function renderUsersList() {
       const container = document.getElementById('usersList');
+
+      if (!currentUser) {
+        container.innerHTML = '<p class="text-muted">يرجى تسجيل الدخول أولاً</p>';
+        return;
+      }
+
       if (users.length === 0) {
         container.innerHTML = '<p class="text-muted">لا يوجد مستخدمين مسجلين</p>';
         return;
       }
 
-      const filtered = users.filter(u => u.id !== currentUser?.id);
+      const filtered = users.filter(u => u.id !== currentUser.id);
 
       if (filtered.length === 0) {
         container.innerHTML = '<p class="text-muted">لا يوجد مستخدمين آخرين</p>';
@@ -8544,7 +8585,7 @@
         return;
       }
 
-      showConfirm(`⚠️ إرسال رسائل`, `سيتم إرسال ${target.length} رسالة. هل أنت متأكد؟`, () => {
+      showConfirm(`⚠️ إرسال رسائل`, `سيتم إرسال ${target.length} رسالة. هل أنت متأكد؟`, async () => {
         let msg = document.getElementById('customMessage').value.trim();
         if (!msg) {
           const template = messageTemplates.find(t => t.category === filterType) || messageTemplates.find(t => t
@@ -8554,48 +8595,50 @@
         }
 
         let sent = 0;
-        target.forEach((s, i) => {
-          setTimeout(() => {
-            const groupName = getGroupName(s.groupId);
-            const data = {
-              name: s.name,
-              student_code: s.studentNumber || '',
-              student_number: s.studentNumber || '',
-              parent_phone: s.parentPhone || '',
-              grade: s.grade || '',
-              academic_year: s.academicYear || '',
-              school: s.school || '',
-              group: groupName,
-              end_date: formatDate(s.endDate),
-              start_date: formatDate(s.startDate),
-              remaining_days: Math.ceil((new Date(s.endDate) - new Date()) / 86400000).toString(),
-              debt_amount: s.remaining.toString(),
-              center_name: settings.centerName || 'نظام السنتر',
-              subject: settings.subject || '',
-              monthly_fee: s.monthlyFee || '0',
-              paid_amount: s.paidAmount || '0',
-              exam_score: '',
-              attendance_count: allAttendance.filter(a => a.studentId === s.id).length.toString(),
-              remaining_sessions: s.remainingSessions || '0',
-              session_price: s.sessionPrice || '0'
-            };
+        for (let i = 0; i < target.length; i++) {
+          const s = target[i];
+          await new Promise(resolve => setTimeout(resolve, 1500));
 
-            if (filterType === 'exam') {
-              const exams = allExams.filter(e => e.studentId === s.id);
-              const lastExam = exams[exams.length - 1];
-              if (lastExam) {
-                data.exam_score = `${lastExam.subject}: ${lastExam.score}/${lastExam.maxScore || 100}`;
-              }
-            }
+          const groupName = getGroupName(s.groupId);
+          const data = {
+            name: s.name,
+            student_code: s.studentNumber || '',
+            student_number: s.studentNumber || '',
+            parent_phone: s.parentPhone || '',
+            grade: s.grade || '',
+            academic_year: s.academicYear || '',
+            school: s.school || '',
+            group: groupName,
+            end_date: formatDate(s.endDate),
+            start_date: formatDate(s.startDate),
+            remaining_days: Math.ceil((new Date(s.endDate) - new Date()) / 86400000).toString(),
+            debt_amount: s.remaining.toString(),
+            center_name: settings.centerName || 'نظام السنتر',
+            subject: settings.subject || '',
+            monthly_fee: s.monthlyFee || '0',
+            paid_amount: s.paidAmount || '0',
+            exam_score: '',
+            attendance_count: allAttendance.filter(a => a.studentId === s.id).length.toString(),
+            remaining_sessions: s.remainingSessions || '0',
+            session_price: s.sessionPrice || '0'
+          };
 
-            const finalMsg = replaceTemplateVars(msg, data);
-            sendWhatsApp(s.parentPhone, finalMsg);
-            sent++;
-            if (i === target.length - 1) {
-              showToast(`✅ تم إرسال ${sent} رسالة`, 'success');
+          if (filterType === 'exam') {
+            const exams = allExams.filter(e => e.studentId === s.id);
+            const lastExam = exams[exams.length - 1];
+            if (lastExam) {
+              data.exam_score = `${lastExam.subject}: ${lastExam.score}/${lastExam.maxScore || 100}`;
             }
-          }, i * 1500);
-        });
+          }
+
+          const finalMsg = replaceTemplateVars(msg, data);
+          sendWhatsApp(s.parentPhone, finalMsg);
+          sent++;
+
+          if (i === target.length - 1) {
+            showToast(`✅ تم إرسال ${sent} رسالة`, 'success');
+          }
+        }
       });
     }
 
@@ -9071,6 +9114,11 @@
     // ================================================================
 
     function exportToExcel() {
+      if (allStudents.length === 0) {
+        showToast('❌ لا يوجد طلاب لتصديرهم', 'info');
+        return;
+      }
+
       const data = allStudents.map(s => ({
         'الكود': s.studentNumber || '',
         'الاسم': s.name,
@@ -9094,6 +9142,11 @@
       }));
 
       const headers = Object.keys(data[0] || {});
+      if (headers.length === 0) {
+        showToast('❌ لا توجد بيانات للتصدير', 'error');
+        return;
+      }
+
       let csv = headers.join(',') + '\n';
       data.forEach(row => {
         csv += headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
@@ -9288,12 +9341,12 @@
     // ================================================================
 
     function setupAdmin() {
-      const fullname = document.getElementById('setupFullname')?.value.trim();
-      const username = document.getElementById('setupUsername')?.value.trim();
-      const password = document.getElementById('setupPassword')?.value;
-      const confirm = document.getElementById('setupConfirmPassword')?.value;
-      const centerName = document.getElementById('setupCenterName')?.value.trim();
-      const subject = document.getElementById('setupSubject')?.value.trim();
+      const fullname = document.getElementById('setupFullname')?.value?.trim() || '';
+      const username = document.getElementById('setupUsername')?.value?.trim() || '';
+      const password = document.getElementById('setupPassword')?.value || '';
+      const confirm = document.getElementById('setupConfirmPassword')?.value || '';
+      const centerName = document.getElementById('setupCenterName')?.value?.trim() || '';
+      const subject = document.getElementById('setupSubject')?.value?.trim() || '';
 
       if (!fullname || !username || !password || !centerName || !subject) {
         showToast('املأ جميع الحقول', 'error');
@@ -9318,8 +9371,9 @@
     }
 
     function checkLogin() {
-      const username = document.getElementById('loginUsername').value;
-      const password = document.getElementById('loginPassword').value;
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
       if (!username || !password) {
         showToast('املأ جميع الحقول', 'error');
         return;
@@ -9332,9 +9386,14 @@
       }
 
       currentUser = user;
-      document.getElementById('userNameDisplay').textContent = user.fullname;
-      document.getElementById('userRoleDisplay').textContent = user.role === 'admin' ? 'مدير' : 'موظف';
-      document.getElementById('userAvatar').textContent = user.fullname.charAt(0);
+
+      const userNameDisplay = document.getElementById('userNameDisplay');
+      const userRoleDisplay = document.getElementById('userRoleDisplay');
+      const userAvatar = document.getElementById('userAvatar');
+
+      if (userNameDisplay) userNameDisplay.textContent = user.fullname;
+      if (userRoleDisplay) userRoleDisplay.textContent = user.role === 'admin' ? 'مدير' : 'موظف';
+      if (userAvatar) userAvatar.textContent = user.fullname.charAt(0);
 
       if (user.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
